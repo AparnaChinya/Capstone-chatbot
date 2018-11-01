@@ -1,0 +1,18 @@
+{
+    "name": "HotelReservation",
+    "description": "",
+    "services": [
+        {
+            "type": "endpoint",
+            "appId": "",
+            "appPassword": "",
+            "endpoint": "http://localhost:3979/api/messages",
+            "id": "92245000-d5cf-11e8-a1b7-2735d0d6b182",
+            "name": "http://localhost:3979/api/messages"
+        }
+    ],
+    "padlock": "",
+    "version": "2.0",
+    "path": "C:\\Users\\Aparna Chinya\\source\\repos\\LUIS-Samples\\bot-integration-samples\\hotel-finder\\csharp\\HotelReservation.bot",
+    "overrides": null
+}
