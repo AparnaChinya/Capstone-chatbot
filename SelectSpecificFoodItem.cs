@@ -6,7 +6,7 @@
 	[Serializable]
 	public class SelectSpecificFoodItem
 	{
-		[Prompt("Which one would you like to have?")]
+		[Prompt("Which one would you like to select?")]
 		[Optional]
 		public string SpecificFoodType { get; set; }
 	}

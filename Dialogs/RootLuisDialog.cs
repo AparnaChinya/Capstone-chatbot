@@ -16,7 +16,9 @@
     public class RootLuisDialog : LuisDialog<object>
     {
         private const string EntityBurgerType = "BurgerType";
-		private int currentState = 0;
+        private string previous_state = "";
+        private string item_selected = "";
+        private List<string> orderList = new List<string>();
 		private Boolean displayWelcome = true;
         [LuisIntent("")]
         [LuisIntent("None")]
@@ -34,22 +36,60 @@
         [LuisIntent("no_intent")]
         public async Task handle_no_intent(IDialogContext dialogContext, IAwaitable<IMessageActivity> activity, LuisResult result)
         {
+            if(orderList.Count() != 0)
+            {
+                string displayOrderText = "Your order:";
+                foreach (var item in orderList)
+                {
+                    displayOrderText = displayOrderText + "\n" + item;
 
+                }
+                await dialogContext.PostAsync(displayOrderText);
+            }
+            else
+            {
+                string displayTextMessage = "Thank you for your time. You may come back and place an order anytime!";
+                await dialogContext.PostAsync(displayTextMessage);
+            }
         }
+
         [LuisIntent("yes_intent")]
         public async Task handle_yes_intent(IDialogContext dialogContext, IAwaitable<IMessageActivity> activity, LuisResult result)
         {
-
+            switch(previous_state)
+            {
+                case "ORDER":
+                    await Select(dialogContext, activity, result);
+                    break;
+                case "SELECT":
+                    await Order(dialogContext,activity,result);
+                    break;
+            }
         }
 
+        public async Task Select(IDialogContext dialogContext, IAwaitable<IMessageActivity> activity, LuisResult result)
+        {
+            previous_state = "SELECT";
+            var specificFoodQuery = new SelectSpecificFoodItem();
+            EntityRecommendation foodentityRecommendation;
+
+            if (result.TryFindEntity(EntityBurgerType, out foodentityRecommendation))
+            {
+                foodentityRecommendation.Type = "SpecificFoodType";
+            }
+
+            var BurgerFormDialog = new FormDialog<SelectSpecificFoodItem>(specificFoodQuery, this.DisplayPlacingOrder, FormOptions.PromptInStart, result.Entities);
+
+            dialogContext.Call(BurgerFormDialog, this.ResumeAfterOrderFormDialog);
+
+
+        }
 
         [LuisIntent("order")]
 		public async Task Order(IDialogContext dialogContext, IAwaitable<IMessageActivity> activity, LuisResult result)
         {
+            previous_state = "ORDER";
             var message = await activity;
-
-			if (currentState == 0)
-			{
 
 				if(displayWelcome)
 					await dialogContext.PostAsync($"Welcome to chatbot for restaurants! We are analyzing your message: '{message.Text}'...");
@@ -66,24 +106,6 @@
 				var BurgerFormDialog = new FormDialog<SelectFoodType>(foodQuery, this.BuildFoodForm, FormOptions.PromptInStart, result.Entities);
 
 				dialogContext.Call(BurgerFormDialog, this.ResumeAfterFoodFormDialog);
-				currentState = 1;
-			}
-			else if (currentState == 1)
-			{
-				var specificFoodQuery = new SelectSpecificFoodItem();
-				EntityRecommendation foodentityRecommendation;
-
-				if (result.TryFindEntity(EntityBurgerType, out foodentityRecommendation))
-				{
-					foodentityRecommendation.Type = "SpecificFoodType";
-				}
-
-				var BurgerFormDialog = new FormDialog<SelectSpecificFoodItem>(specificFoodQuery, this.DisplayPlacingOrder, FormOptions.PromptInStart, result.Entities);
-
-				dialogContext.Call(BurgerFormDialog, this.ResumeAfterOrderFormDialog);
-				
-				currentState = 0;
-			}
 
 		}
 
@@ -119,7 +141,9 @@
 			try
 			{
 				var searchQuery = await result;
-				String postMessage = searchQuery.SpecificFoodType+" selected, would you like to order something else? If yes, please say I would like to order";
+                //to do: validate the selected item 
+                orderList.Add(searchQuery.SpecificFoodType);
+                String postMessage = searchQuery.SpecificFoodType+" selected, would you like to order something else?";
 				await context.PostAsync(postMessage);
 			}
 			catch (FormCanceledException ex)
@@ -153,11 +177,13 @@
 
 				switch (searchQuery.FoodType.ToLower()) {
 					case "burger":
-						foodDisplayList = await this.GetFoodAsync(searchQuery);
+                        item_selected = "BURGER";
+                        foodDisplayList = await this.GetFoodAsync(searchQuery);
 						postMessage = "I found "+foodDisplayList.Count()+" burgers.";
 						break;
 					case "fries":
-						foodDisplayList = await this.GetFoodAsync(searchQuery);
+                        item_selected = "BURGER";
+                        foodDisplayList = await this.GetFoodAsync(searchQuery);
 						postMessage = "I found "+foodDisplayList.Count()+" fries.";
 						break;
 					default:
@@ -170,31 +196,13 @@
                 var resultMessage = context.MakeMessage();
                 resultMessage.AttachmentLayout = AttachmentLayoutTypes.Carousel;
                 resultMessage.Attachments = new List<Attachment>();
-
-                foreach (var eachBurger in foodDisplayList)
+                string displayMenuText = "The options are...";
+                foreach (var item in foodDisplayList)
                 {
-                    HeroCard heroCard = new HeroCard()
-                    {
-                        Title = eachBurger.Name,
-                        //Subtitle = $"{eachBurger.Rating} starts. {eachBurger.NumberOfReviews} reviews. From ${eachBurger.PriceStarting} per night.",
-                        Images = new List<CardImage>()
-                        {
-                            new CardImage() { Url = eachBurger.Image }
-                        },
-                        Buttons = new List<CardAction>()
-                        {
-                            new CardAction()
-                            {
-                                Title = "More details",
-                                Type = ActionTypes.OpenUrl,
-                                Value = $"https://www.bing.com/search?q=burgers+" //+ HttpUtility.UrlEncode(eachBurger.Location)
-                            }
-                        }
-                    };
+                    displayMenuText = displayMenuText + "\n" + item.Name;
 
-                    resultMessage.Attachments.Add(heroCard.ToAttachment());
                 }
-                await context.PostAsync(resultMessage);
+                await context.PostAsync(displayMenuText);
 				await context.PostAsync($"Would you like to select one of these?");
 			}
             catch (FormCanceledException ex)
