@@ -16,36 +16,75 @@
     public class RootLuisDialog : LuisDialog<object>
     {
         private const string EntityBurgerType = "BurgerType";
-
-
+		private int currentState = 0;
+		private Boolean displayWelcome = true;
         [LuisIntent("")]
         [LuisIntent("None")]
         public async Task None(IDialogContext context, LuisResult result)
             {
-            string message = $"Sorry, I did not understand '{result.Query}'. Type 'help' if you need assistance.";
+			string message = $"Sorry, I did not understand '{result.Query}'. Type 'help' if you need assistance.";
 
             await context.PostAsync(message);
 
             context.Wait(this.MessageReceived);
         }
 
+
+
+        [LuisIntent("no_intent")]
+        public async Task handle_no_intent(IDialogContext dialogContext, IAwaitable<IMessageActivity> activity, LuisResult result)
+        {
+
+        }
+        [LuisIntent("yes_intent")]
+        public async Task handle_yes_intent(IDialogContext dialogContext, IAwaitable<IMessageActivity> activity, LuisResult result)
+        {
+
+        }
+
+
         [LuisIntent("order")]
-        public async Task Order(IDialogContext dialogContext, IAwaitable<IMessageActivity> activity, LuisResult result)
+		public async Task Order(IDialogContext dialogContext, IAwaitable<IMessageActivity> activity, LuisResult result)
         {
             var message = await activity;
-            await dialogContext.PostAsync($"Welcome to chatbot for restaurants! We are analyzing your message: '{message.Text}'...");
 
-            var foodQuery = new SelectFoodType();
-            EntityRecommendation foodentityRecommendation;
+			if (currentState == 0)
+			{
 
-            if(result.TryFindEntity(EntityBurgerType, out foodentityRecommendation))
-            {
-                foodentityRecommendation.Type = "FoodType";
-            }
+				if(displayWelcome)
+					await dialogContext.PostAsync($"Welcome to chatbot for restaurants! We are analyzing your message: '{message.Text}'...");
+				displayWelcome = false;
 
-            var BurgerFormDialog = new FormDialog<SelectFoodType>(foodQuery, this.BuildFoodForm, FormOptions.PromptInStart, result.Entities);
+				var foodQuery = new SelectFoodType();
+				EntityRecommendation foodentityRecommendation;
 
-            dialogContext.Call(BurgerFormDialog, this.ResumeAfterFoodFormDialog);
+				if (result.TryFindEntity(EntityBurgerType, out foodentityRecommendation))
+				{
+					foodentityRecommendation.Type = "FoodType";
+				}
+
+				var BurgerFormDialog = new FormDialog<SelectFoodType>(foodQuery, this.BuildFoodForm, FormOptions.PromptInStart, result.Entities);
+
+				dialogContext.Call(BurgerFormDialog, this.ResumeAfterFoodFormDialog);
+				currentState = 1;
+			}
+			else if (currentState == 1)
+			{
+				var specificFoodQuery = new SelectSpecificFoodItem();
+				EntityRecommendation foodentityRecommendation;
+
+				if (result.TryFindEntity(EntityBurgerType, out foodentityRecommendation))
+				{
+					foodentityRecommendation.Type = "SpecificFoodType";
+				}
+
+				var BurgerFormDialog = new FormDialog<SelectSpecificFoodItem>(specificFoodQuery, this.DisplayPlacingOrder, FormOptions.PromptInStart, result.Entities);
+
+				dialogContext.Call(BurgerFormDialog, this.ResumeAfterOrderFormDialog);
+				
+				currentState = 0;
+			}
+
 		}
 
 
@@ -70,15 +109,38 @@
 
 		private IForm<SelectSpecificFoodItem> DisplayPlacingOrder()
 		{
-			OnCompletionAsyncDelegate<SelectFoodType> processFoodSearch = async (context, state) =>
-			{
-				var message = "Placing order ";
-				await context.PostAsync(message);
-			};
-
 			return new FormBuilder<SelectSpecificFoodItem>()
 				.Field(nameof(SelectSpecificFoodItem.SpecificFoodType), (state) => string.IsNullOrEmpty(state.SpecificFoodType))
 				.Build();
+		}
+
+		private async Task ResumeAfterOrderFormDialog(IDialogContext context, IAwaitable<SelectSpecificFoodItem> result)
+		{
+			try
+			{
+				var searchQuery = await result;
+				String postMessage = searchQuery.SpecificFoodType+" selected, would you like to order something else? If yes, please say I would like to order";
+				await context.PostAsync(postMessage);
+			}
+			catch (FormCanceledException ex)
+			{
+				string reply;
+
+				if (ex.InnerException == null)
+				{
+					reply = "You have canceled the operation.";
+				}
+				else
+				{
+					reply = $"Oops! Something went wrong :( Technical Details: {ex.InnerException.Message}";
+				}
+
+				await context.PostAsync(reply);
+			}
+			finally
+			{
+				context.Done<object>(null);
+			}
 		}
 
 		private async Task ResumeAfterFoodFormDialog(IDialogContext context, IAwaitable<SelectFoodType> result)
@@ -133,6 +195,7 @@
                     resultMessage.Attachments.Add(heroCard.ToAttachment());
                 }
                 await context.PostAsync(resultMessage);
+				await context.PostAsync($"Would you like to select one of these?");
 			}
             catch (FormCanceledException ex)
             {
@@ -158,7 +221,7 @@
        [LuisIntent("Help")]
         public async Task Help(IDialogContext context, LuisResult result)
         {
-            await context.PostAsync("Hi! Try asking me things like 'search hotels in Seattle', 'search hotels near LAX airport' or 'show me the reviews of The Bot Resort'");
+            await context.PostAsync("Hi! Try asking me things like 'I want to place an order', 'I would like to select burger'");
 
             context.Wait(this.MessageReceived);
         }
