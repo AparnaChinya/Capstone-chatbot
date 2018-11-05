@@ -4,9 +4,9 @@
     using Microsoft.Bot.Builder.FormFlow;
 
     [Serializable]
-    public class OrderFood
+    public class SelectFoodType
     {
-        [Prompt("What would you like to have?")]
+        [Prompt("What would you like to order?")]
         [Optional]
         public string FoodType { get; set; }
 
