@@ -1,4 +1,4 @@
-﻿namespace HungryBelly.Dialogs
+namespace HungryBelly.Dialogs
 {
     using System;
     using System.Collections.Generic;
@@ -11,6 +11,7 @@
     using Microsoft.Bot.Builder.Luis;
     using Microsoft.Bot.Builder.Luis.Models;
     using Microsoft.Bot.Connector;
+
 
     [Serializable]
     public class Orders
@@ -25,7 +26,7 @@
     [Serializable]
     public class RootLuisDialog : LuisDialog<object>
     {
-     
+
         Dictionary<string, List<string>> foodDict = new Dictionary<string, List<string>>();
         List<Orders> listOfOrders = new List<Orders>();
         public string foodTypePrompted = "";
@@ -97,7 +98,6 @@
             sal.Add("spicy");
             foodDict["salad"] = sal;
 
-
             var message = await activity;
             var entities = new List<EntityRecommendation>(result.Entities);
 
@@ -139,7 +139,6 @@
                     }
                 }
 
-
                 foreach (var item in food)
                 {
                     var x = entities.Select(a => a).Where(b => b.Type.ToLower().Contains(item.ToLower()));
@@ -151,7 +150,9 @@
 
                 if (foodType == "")
                 {
+
                     //TODO: this is not optimized, write proper logic
+
                     var m1 = "We have different kinds of " + food[0];
                     string messageDialog = "";
                     foreach (var item in foodDict[food[0]])
@@ -193,31 +194,22 @@
             await context.PostAsync(confirmation ? "What do you want to order?\n" : "You are done\n");
         }
 
-        private async Task<int> ResumeAfterOrderFoodClarification(IDialogContext context, IAwaitable<string> result)
+        private async Task ResumeAfterOrderFoodClarification(IDialogContext context, IAwaitable<string> result)
         {
             var foods = await result;
-
-            //TODO: Check the values present in the foodDict and then add it to order
-
-            var x = foodDict["burger"].Contains(foods);
             await context.PostAsync($"I see you want to order {foods}");
             foodTypePrompted = foods;
             await context.PostAsync("\n Do you want to order anything else?");
-            return 0;
 
         }
 
-        [LuisIntent("Menu")]
+
         [LuisIntent("Help")]
         public async Task Help(IDialogContext context, LuisResult result)
         {
             //TODO: Display the menu
             await context.PostAsync("Let me show you the menu!");
-
             context.Wait(this.MessageReceived);
         }
-
-
-
     }
 }
