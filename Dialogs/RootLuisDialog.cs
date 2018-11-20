@@ -6,12 +6,13 @@ namespace HungryBelly.Dialogs
     using System.Text.RegularExpressions;
     using System.Threading.Tasks;
     using System.Web;
+    using LuisBot.Dialogs;
     using Microsoft.Bot.Builder.Dialogs;
     using Microsoft.Bot.Builder.FormFlow;
     using Microsoft.Bot.Builder.Luis;
     using Microsoft.Bot.Builder.Luis.Models;
     using Microsoft.Bot.Connector;
-
+    using Newtonsoft.Json.Linq;
 
     [Serializable]
     public class Orders
@@ -68,16 +69,16 @@ namespace HungryBelly.Dialogs
             }
         }
 
-        [LuisIntent("no_intent")]
-        public async Task no_intent(IDialogContext dialogContext, IAwaitable<IMessageActivity> activity, LuisResult result)
-        {
-            string message = "";
-            foreach (var item in listOfOrders)
-            {
-                message += item.quantity + " " + item.name + " " + "\n";
-            }
-            await dialogContext.PostAsync("Thank you for the order!" + message);
-        }
+        //[LuisIntent("no_intent")]
+        //public async Task no_intent(IDialogContext dialogContext, IAwaitable<IMessageActivity> activity, LuisResult result)
+        //{
+        //    string message = "";
+        //    foreach (var item in listOfOrders)
+        //    {
+        //        message += item.quantity + " " + item.name + " " + "\n";
+        //    }
+        //    await dialogContext.PostAsync("Thank you for the order!" + message);
+        //}
 
 
         [LuisIntent("order")]
@@ -101,106 +102,153 @@ namespace HungryBelly.Dialogs
             var message = await activity;
             var entities = new List<EntityRecommendation>(result.Entities);
 
+
+            await ExtractEntities(dialogContext, entities);
+            //if (!entities.Any((entity) => entity.Type == "food"))
+            //{
+
+            //}
+
+        }
+
+
+
+
+
+        private async Task ExtractEntities(IDialogContext dialogContext, List<EntityRecommendation> entities)
+        {
             List<string> food = new List<string>();
             string foodType = "";
             string quantity = "";
-
-            if (!entities.Any((entity) => entity.Type == "food"))
+            foreach (var entity in entities)
             {
-                foreach (var entity in entities)
+                switch (entity.Type.ToLower())
                 {
-                    switch (entity.Type.ToLower())
-                    {
-                        case "food":
+                    case "food":
+                        {
+                            if (entity.Entity.ToLower().Contains("burger"))
                             {
-                                if (entity.Entity.ToLower().Contains("burger"))
-                                {
-                                    food.Add("burger");
-                                }
-                                if (entity.Entity.ToLower().Contains("salad"))
-                                {
-                                    food.Add("salad");
-                                }
-                                if (entity.Entity.ToLower().Contains("soup"))
-                                {
-                                    food.Add("soup");
-                                }
-                                if (entity.Entity.ToLower().Contains("fries"))
-                                {
-                                    food.Add("fries");
-                                }
-                                break;
+                                food.Add("burger");
                             }
-                        case "builtin.number":
+                            if (entity.Entity.ToLower().Contains("salad"))
                             {
-                                quantity = entity.Entity;
-                                break;
+                                food.Add("salad");
                             }
-                    }
+                            if (entity.Entity.ToLower().Contains("soup"))
+                            {
+                                food.Add("soup");
+                            }
+                            if (entity.Entity.ToLower().Contains("fries"))
+                            {
+                                food.Add("fries");
+                            }
+                            break;
+                        }
+                    case "builtin.number":
+                        {
+                            quantity = entity.Entity;
+                            break;
+                        }
                 }
+            }
 
-                foreach (var item in food)
+            foreach (var item in food)
+            {
+                var x = entities.Select(a => a).Where(b => b.Type.ToLower().Contains(item.ToLower()));
+                if (x.Count() != 0 && foodDict.ContainsKey(item))
                 {
-                    var x = entities.Select(a => a).Where(b => b.Type.ToLower().Contains(item.ToLower()));
-                    if (x.Count() != 0 && foodDict.ContainsKey(item))
-                    {
-                        foodType = x.First().Entity;
-                    }
+                    foodType = x.First().Entity;
                 }
+            }
 
-                if (foodType == "")
+            if (foodType == "")
+            {
+
+                //TODO: this is not optimized, write proper logic
+
+                var m1 = "We have different kinds of " + food[0];
+                string messageDialog = "";
+                foreach (var item in foodDict[food[0]])
                 {
-
-                    //TODO: this is not optimized, write proper logic
-
-                    var m1 = "We have different kinds of " + food[0];
-                    string messageDialog = "";
-                    foreach (var item in foodDict[food[0]])
-                    {
-                        messageDialog += item + "\n";
-                    }
-                    await dialogContext.PostAsync(m1 + "\n" + messageDialog);
-                    PromptDialog.Text(dialogContext, ResumeAfterOrderFoodClarification, "What kind do you want to order?");
-                    foodType = foodTypePrompted;
-                    listOfOrders.Add(new Orders
-                    {
-                        name = foodType,
-                        quantity = quantity.ToString()
-                    }
-                    );
+                    messageDialog += item + "\n";
                 }
-                else
+                await dialogContext.PostAsync(m1 + "\n" + messageDialog);
+                PromptDialog.Text(dialogContext, ResumeAfterOrderFoodClarification, "What kind do you want to order?");
+                foodType = foodTypePrompted;
+                listOfOrders.Add(new Orders
                 {
-                    listOfOrders.Add(new Orders
-                    {
-                        name = foodType,
-                        quantity = quantity.ToString()
-                    }
-                    );
-                    await dialogContext.PostAsync("Do you want to order anything else?");
+                    name = foodType,
+                    quantity = quantity.ToString()
                 }
+                );
+            }
+            else
+            {
+                listOfOrders.Add(new Orders
+                {
+                    name = foodType,
+                    quantity = quantity.ToString()
+                }
+                );
+                //await dialogContext.PostAsync("Do you want to order anything else?");
+                dialogContext.PrivateConversationData.SetValue("finalOrder", listOfOrders);
+
+                PromptDialog.Text(dialogContext, handleFinalIntent, "Do you want to order anything else?");
             }
 
         }
 
-        private async Task AskForMoreFood(IDialogContext context, IAwaitable<bool> result)
-        {
-            var confirmation = await result;
-            string message = "";
-            //foreach (var item in listOfOrders)
-            //{
-            //    message += item.quantity + " " + item.name + " " + "\n";
-            //}
-            await context.PostAsync(confirmation ? "What do you want to order?\n" : "You are done\n");
-        }
 
         private async Task ResumeAfterOrderFoodClarification(IDialogContext context, IAwaitable<string> result)
         {
             var foods = await result;
             await context.PostAsync($"I see you want to order {foods}");
             foodTypePrompted = foods;
-            await context.PostAsync("\n Do you want to order anything else?");
+            PromptDialog.Text(context, handleFinalIntent, "Do you want to order anything else from here?");
 
+        }
+
+
+
+
+        private async Task handleFinalIntent(IDialogContext context, IAwaitable<string> result)
+        {
+
+            var foods = await result;
+            //string intent = "";
+
+            //var entities = data["topScoringIntent"]["intent"].Value<string>();)
+
+            //await context.SayAsync("Inside finalIntent"+ intentOfresult);
+            string messageDialog = "";
+            String m1 = "you have ordered";
+            if (foods.Equals("no")){
+                foreach (var item in listOfOrders)
+                {
+                    messageDialog += item.name + "\n";
+                }
+                await context.PostAsync(m1 + "\n" + messageDialog);
+            } 
+
+
+
+            else 
+            {
+                var data = await LuisApi.MakeRequest(foods);
+                var intentOfResult = data["topScoringIntent"]["intent"].Value<string>();
+                if (!data.Equals(null) && intentOfResult.Equals("order"))
+                {
+                    JArray entitiesArr = (JArray)data["entities"];
+                    List<EntityRecommendation> entities = entitiesArr.ToObject<List<EntityRecommendation>>();
+
+                    await ExtractEntities(context, entities);
+                    //await context.Forward(new RootLuisDialog(), this.ResumeAfterNewOrderDialog, message, CancellationToken.None);
+                   
+                }else{
+                    PromptDialog.Text(context, handleFinalIntent, "Do you want to order anything else?");
+                }
+
+            }
         }
 
 
