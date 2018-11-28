@@ -86,6 +86,7 @@ namespace HungryBelly.Dialogs
         {
             foodTypePrompted = "";
             Orders myOrder = new Orders();
+            dialogContext.PrivateConversationData.SetValue("food", "burger");
             //TODO: Add this dictionary globally
             List<string> bur = new List<string>();
             bur.Add("veggie");
@@ -119,7 +120,8 @@ namespace HungryBelly.Dialogs
         {
             List<string> food = new List<string>();
             string foodType = "";
-            string quantity = "";
+            string quantity = "1";
+            try{
             foreach (var entity in entities)
             {
                 switch (entity.Type.ToLower())
@@ -173,32 +175,39 @@ namespace HungryBelly.Dialogs
                     messageDialog += item + "\n";
                 }
                 await dialogContext.PostAsync(m1 + "\n" + messageDialog);
-                PromptDialog.Text(dialogContext, ResumeAfterOrderFoodClarification, "What kind do you want to order?");
+                PromptDialog.Text(dialogContext, ResumeAfterOrderFoodClarification, "What kind of burger do you want to order?");
                 foodType = foodTypePrompted;
+                /*
                 listOfOrders.Add(new Orders
                 {
                     name = foodType,
                     quantity = quantity.ToString()
                 }
-                );
+                );*/
             }
             else
             {
+
                 listOfOrders.Add(new Orders
                 {
-                    name = foodType,
-                    quantity = quantity.ToString()
+                    name = "burger",
+                    type=foodType,
+                    quantity =  quantity.ToString()
                 }
                 );
                 //await dialogContext.PostAsync("Do you want to order anything else?");
-                dialogContext.PrivateConversationData.SetValue("finalOrder", listOfOrders);
+                //dialogContext.PrivateConversationData.SetValue("finalOrder", listOfOrders);
 
                 PromptDialog.Text(dialogContext, handleFinalIntent, "Do you want to order anything else?");
+            }
+            }
+            catch(Exception e){
+                await dialogContext.PostAsync("Sorry we didn't get that.");
             }
 
         }
 
-
+        /*
         private async Task ResumeAfterOrderFoodClarification(IDialogContext context, IAwaitable<string> result)
         {
             var foods = await result;
@@ -206,6 +215,69 @@ namespace HungryBelly.Dialogs
             foodTypePrompted = foods;
             PromptDialog.Text(context, handleFinalIntent, "Do you want to order anything else from here?");
 
+        }*/
+
+        private async Task ResumeAfterOrderFoodClarification(IDialogContext context, IAwaitable<string> result)
+        {
+            var foods = await result;
+
+            Boolean flag = false;
+            flag = CheckTypeValidity(context, foods);
+            // get quantity with luis call
+            if (flag)
+            {
+                foodTypePrompted = getType(context, foods);
+                context.PrivateConversationData.SetValue("typeFound", "true");
+                await context.PostAsync($"Great! I'll add {foodTypePrompted} burger to your order");
+                //foodTypePrompted = foods;
+                //await context.SayAsync("Adding to list of orders..");
+                listOfOrders.Add(new Orders
+                {
+                    name = "burger",
+                    type= foodTypePrompted,
+                    quantity = "1"
+                }
+                );
+                //await context.PostAsync("\n Do you want to order anything else?");
+                PromptDialog.Text(context, handleFinalIntent, "Do you want to order anything else from here?");
+            }
+            else
+            {
+                context.PrivateConversationData.SetValue("typeFound", "false");
+                //await context.PostAsync("Did not match with nay food type");
+                PromptDialog.Text(context, ResumeAfterOrderFoodClarification, "I'm sorry we don't have that. You can select the ones we have available.");
+            }
+            //context.Wait(MessageReceived);
+        }
+
+        private static Boolean CheckTypeValidity(IDialogContext context, string foods)
+        {
+            Boolean flag = false;
+            string food = context.PrivateConversationData.GetValue<String>("food");
+            List<string> foodTypes = FoodMenu.foodDict["burger"];
+            foreach (string s in foodTypes)
+            {
+                if (foods.Contains(s))
+                {
+                    flag = true;
+                }
+            }
+            return flag;
+        }
+
+        private static String getType(IDialogContext context, string foods)
+        {
+            String flag = "";
+            string food = context.PrivateConversationData.GetValue<String>("food");
+            List<string> foodTypes = FoodMenu.foodDict["burger"];
+            foreach (string s in foodTypes)
+            {
+                if (foods.Contains(s))
+                {
+                    flag = s;
+                }
+            }
+            return flag;
         }
 
 
@@ -221,18 +293,19 @@ namespace HungryBelly.Dialogs
 
             //await context.SayAsync("Inside finalIntent"+ intentOfresult);
             string messageDialog = "";
-            String m1 = "you have ordered";
-            if (foods.Equals("no")){
+            String m1 = "Thank you for ordering with Hungry Belly. Here is your final order.";
+            if (foods.Equals("no"))
+            {
                 foreach (var item in listOfOrders)
                 {
-                    messageDialog += item.name + "\n";
+                    messageDialog += item.quantity + " "+item.type + " " + item.name +  "\n";
                 }
                 await context.PostAsync(m1 + "\n" + messageDialog);
-            } 
+            }
 
 
 
-            else 
+            else
             {
                 var data = await LuisApi.MakeRequest(foods);
                 var intentOfResult = data["topScoringIntent"]["intent"].Value<string>();
@@ -243,9 +316,11 @@ namespace HungryBelly.Dialogs
 
                     await ExtractEntities(context, entities);
                     //await context.Forward(new RootLuisDialog(), this.ResumeAfterNewOrderDialog, message, CancellationToken.None);
-                   
-                }else{
-                    PromptDialog.Text(context, handleFinalIntent, "Do you want to order anything else?");
+
+                }
+                else
+                {
+                    PromptDialog.Text(context, handleFinalIntent, "What do you want to order?");
                 }
 
             }
