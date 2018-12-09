@@ -19,8 +19,8 @@ namespace HungryBelly.Dialogs
     {
         public string name; // eg: Burger
         public string type; //Cheese
-        public string quantity;
-        public string price;
+        public int quantity;
+        public int price;
     }
 
     [LuisModel("2acfc32a-8667-431b-80da-e60ef10ac430", "b1446c3d2381426db9261a550b9f99bd")]
@@ -120,7 +120,7 @@ namespace HungryBelly.Dialogs
         {
             List<string> food = new List<string>();
             string foodType = "";
-            string quantity = "1";
+            int quantity = 1;
             try{
             foreach (var entity in entities)
             {
@@ -148,7 +148,7 @@ namespace HungryBelly.Dialogs
                         }
                     case "builtin.number":
                         {
-                            quantity = entity.Entity;
+                                quantity = Int32.Parse(entity.Entity);
                             break;
                         }
                 }
@@ -168,13 +168,29 @@ namespace HungryBelly.Dialogs
 
                 //TODO: this is not optimized, write proper logic
 
-                var m1 = "We have different kinds of " + food[0];
+                var m1 = "We have ";
                 string messageDialog = "";
+                    int count = 0;
+                    int size = foodDict[food[0]].Count;
                 foreach (var item in foodDict[food[0]])
                 {
-                    messageDialog += item + "\n";
+                        if (count == size - 2)
+                        {
+                            messageDialog += item + " and ";
+                          
+                        }
+                        else if (count == size - 1)
+                        {
+                            messageDialog += item + " ";
+                        }
+                        else
+                        {
+                            messageDialog += item + ", ";
+                        }
+                        count++;
                 }
-                await dialogContext.PostAsync(m1 + "\n" + messageDialog);
+                    messageDialog += food[0] + "s.";
+                await dialogContext.PostAsync(m1 + " " + messageDialog);
                 PromptDialog.Text(dialogContext, ResumeAfterOrderFoodClarification, "What kind of burger do you want to order?");
                 foodType = foodTypePrompted;
                 /*
@@ -187,14 +203,16 @@ namespace HungryBelly.Dialogs
             }
             else
             {
-
+                    addToOrder(listOfOrders, "burger", foodType, quantity);
+                    /*
                 listOfOrders.Add(new Orders
                 {
                     name = "burger",
                     type=foodType,
                     quantity =  quantity.ToString()
                 }
-                );
+                );*/
+
                 //await dialogContext.PostAsync("Do you want to order anything else?");
                 //dialogContext.PrivateConversationData.SetValue("finalOrder", listOfOrders);
 
@@ -202,7 +220,7 @@ namespace HungryBelly.Dialogs
             }
             }
             catch(Exception e){
-                await dialogContext.PostAsync("Sorry we didn't get that.");
+                await dialogContext.PostAsync("Sorry we didn't get that. We have burgers if you would like some? ");
             }
 
         }
@@ -231,13 +249,15 @@ namespace HungryBelly.Dialogs
                 await context.PostAsync($"Great! I'll add {foodTypePrompted} burger to your order");
                 //foodTypePrompted = foods;
                 //await context.SayAsync("Adding to list of orders..");
+                addToOrder(listOfOrders, "burger", foodTypePrompted, 1);
+                /*
                 listOfOrders.Add(new Orders
                 {
                     name = "burger",
                     type= foodTypePrompted,
                     quantity = "1"
                 }
-                );
+                );*/
                 //await context.PostAsync("\n Do you want to order anything else?");
                 PromptDialog.Text(context, handleFinalIntent, "Do you want to order anything else from here?");
             }
@@ -278,6 +298,23 @@ namespace HungryBelly.Dialogs
                 }
             }
             return flag;
+        }
+
+        private static void addToOrder(List<Orders> listOfOrders, String name, String foodType, int quantity){
+            foreach(Orders order in listOfOrders){
+                if(name.Equals(order.name) && foodType.Equals(order.type)){
+                    order.quantity = order.quantity + quantity;
+                    return;
+                }
+            }
+            listOfOrders.Add(new Orders
+            {
+                name = "burger",
+                type = foodType,
+                quantity = quantity
+            });
+            return;
+
         }
 
 
