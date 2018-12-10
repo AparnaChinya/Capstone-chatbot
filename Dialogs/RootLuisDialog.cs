@@ -22,7 +22,7 @@ namespace HungryBelly.Dialogs
         public int quantity;
         public int price;
     }
-
+    
     [LuisModel("2acfc32a-8667-431b-80da-e60ef10ac430", "b1446c3d2381426db9261a550b9f99bd")]
     [Serializable]
     public class RootLuisDialog : LuisDialog<object>
@@ -79,6 +79,63 @@ namespace HungryBelly.Dialogs
         //    }
         //    await dialogContext.PostAsync("Thank you for the order!" + message);
         //}
+
+
+        [LuisIntent("requestMenu")]
+        public async Task RequestMenu(IDialogContext context, LuisResult result)
+        {
+            await context.PostAsync("We have menu for food and drinks.");
+            PromptDialog.Text(context, handleRequestMenu, "What do want to see? - Menu for Food or for Drinks or both ?");
+        }
+
+        private async Task handleRequestMenu(IDialogContext context, IAwaitable<string> result)
+        {
+            var whatToShow = await result; //result.Equals("food");
+            string option = whatToShow.ToLower();
+            if (option.Contains("eat") || option.Contains("food"))
+            {
+                await printFoodMenu(context);
+            }
+            else if (option.Contains("drink") || option.Contains("beverage"))
+            {
+                await printDrinksMenu(context);
+            }
+            else if (option.Contains("both") || option.Contains("all"))
+            {
+                await printFoodMenu(context);
+                await printDrinksMenu(context);
+            }
+            else
+            {
+                PromptDialog.Text(context, handleRequestMenu, "Sorry, I don't understand this yet! What would you like to know - Menu for food, Menu for Drinks or both ?");
+            }
+            
+        }
+
+        private async Task printFoodMenu(IDialogContext context)
+        {
+            string sfm1 = "You can choose from - Cheese, Chicken, Veggie Burgers and Curly, Shoestring, Waffle Fries to eat";
+            await context.PostAsync(sfm1);
+        }
+
+        private async Task printDrinksMenu(IDialogContext context)
+        {
+            string sdm1 = "You can choose from - Diet Coke, Coke, Zero Coke and Lemonade to drink.";
+            await context.PostAsync(sdm1);
+        }
+
+        [LuisIntent("show_food")]
+        public async Task ShowFoodMenu(IDialogContext context, LuisResult result)
+        {
+            await printFoodMenu(context);
+        }
+
+
+        [LuisIntent("show_drinks")]
+        public async Task ShowDrinksMenu(IDialogContext context, LuisResult result)
+        {
+            await printDrinksMenu(context);
+        }
 
 
         [LuisIntent("order")]
@@ -307,11 +364,19 @@ namespace HungryBelly.Dialogs
                     return;
                 }
             }
+            int itemPrice;
+            //if burger
+            itemPrice  = foodType.Equals("cheese")? 1 : foodType.Equals("chicken")? 2 : foodType.Equals("veggie") ? 3 : 0;
+            //if fries
+            //itemPrice  = foodType.Equals("curly")? 1 : foodType.Equals("shoestring")? 1 : foodType.Equals("waffle") ? 2 : 0;
+            //if drinks
+            //itemPrice  = 1;
             listOfOrders.Add(new Orders
             {
                 name = "burger",
                 type = foodType,
-                quantity = quantity
+                quantity = quantity,
+                price = itemPrice
             });
             return;
 
@@ -333,11 +398,15 @@ namespace HungryBelly.Dialogs
             String m1 = "Thank you for ordering with Hungry Belly. Here is your final order.";
             if (foods.Equals("no"))
             {
+                var totalCost = 0;
                 foreach (var item in listOfOrders)
                 {
-                    messageDialog += item.quantity + " "+item.type + " " + item.name +  "\n";
+                    var itemsCost = (item.price * item.quantity);
+                    messageDialog += item.quantity + " "+item.type + " " + "\n";// item.name + " @ $"+ itemsCost+ " each " +\n";
+                    totalCost += itemsCost;
                 }
                 await context.PostAsync(m1 + "\n" + messageDialog);
+                await context.PostAsync("Your bill totals to $"+totalCost+ "\n" + "Give me a good review as a tip..! :)");
             }
 
 
@@ -359,7 +428,6 @@ namespace HungryBelly.Dialogs
                 {
                     PromptDialog.Text(context, handleFinalIntent, "What do you want to order?");
                 }
-
             }
         }
 
