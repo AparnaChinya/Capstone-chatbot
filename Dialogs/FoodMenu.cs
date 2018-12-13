@@ -22,7 +22,7 @@ using Newtonsoft.Json;
         static FoodMenu(){
             List<string> bur = new List<string>();
             bur.Add("veggie");
-            bur.Add("beef");
+            bur.Add("ham");
             bur.Add("cheese");
             foodDict["burger"] = bur;
             foodDict["burgers"] = bur;
