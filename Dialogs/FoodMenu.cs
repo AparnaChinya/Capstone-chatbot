@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 using System.Collections.Generic;
 using System.Linq;
@@ -22,15 +22,24 @@ using Newtonsoft.Json;
         static FoodMenu(){
             List<string> bur = new List<string>();
             bur.Add("veggie");
-            bur.Add("masala");
+            bur.Add("beef");
             bur.Add("cheese");
             foodDict["burger"] = bur;
+            foodDict["burgers"] = bur;
 
-            List<string> sal = new List<string>();
-            sal.Add("ceaser");
-            sal.Add("garden");
-            sal.Add("spicy");
-            foodDict["salad"] = sal;
-        }
+            List<string> fries = new List<string>();
+            fries.Add("curly");
+            fries.Add("waffle");
+            fries.Add("shoestring");
+            foodDict["fries"] = fries;
+
+            List<string> coke = new List<string>();
+            coke.Add("small");
+            coke.Add("medium");
+            coke.Add("large");
+            foodDict["coke"] = coke;
+
+
+    }
     }
 
