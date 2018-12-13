@@ -155,10 +155,15 @@ namespace HungryBelly.Dialogs
                 food = order.name;
                 foodType = order.type;
                 quantity = order.quantity;
+
                 if (foodType == "")
                 {
+                    // Prompt user to specify details when removing
+                    if(removeFlag) {
+                        await dialogContext.PostAsync("Could you mention the entire order to be removed? We couldn't find a matching order.");
+                    }
 
-                    var m1 = "We have veggie, cheese and beef burgers. Which one would you like?";
+                    var m1 = "We have veggie, ham and cheese burgers. Which one would you like?";
                     var m2 = "We have curly, shoestring and waffle fries. Which one would you like?";
                     var m3 = "We have small, medium and large coke. Which one would you like?";
                     dialogContext.PrivateConversationData.SetValue("food", food);
@@ -184,7 +189,7 @@ namespace HungryBelly.Dialogs
 
         }
 
-       
+
 
         private async Task ResumeAfterOrderFoodClarification(IDialogContext context, IAwaitable<string> result)
         {
@@ -200,11 +205,13 @@ namespace HungryBelly.Dialogs
             {
                 //if (!data.Equals(null) && intentOfResult.Equals("order"))
 
-                    JArray entitiesArr = (JArray)data["entities"];
-                    List<EntityRecommendation> entities = entitiesArr.ToObject<List<EntityRecommendation>>();
+                JArray entitiesArr = (JArray)data["entities"];
+                JArray entitiesArrComp = (JArray)data["compositeEntities"];
+                List<EntityRecommendation> entities = entitiesArr.ToObject<List<EntityRecommendation>>();
+                List<CompositeEntity> comp = entitiesArrComp.ToObject<List<CompositeEntity>>();
 
-                    await ExtractEntities(context, entities);
-                    //await context.Forward(new RootLuisDialog(), this.ResumeAfterNewOrderDialog, message, CancellationToken.None);
+                await ExtractEntities(context, entities, comp, false);
+                //await context.Forward(new RootLuisDialog(), this.ResumeAfterNewOrderDialog, message, CancellationToken.None);
 
 
                 //foodTypePrompted = getType(context, foods);
@@ -274,6 +281,13 @@ namespace HungryBelly.Dialogs
                         type = entityChild.Value;
                     }
                 }
+
+                if (food.Length > 7)
+                {
+                    type = food.Substring(0, food.IndexOf('b'));
+                    food = "burger";
+                }
+
                 if (FoodMenu.foodDict[food].Contains(type))
                 {
                     temp.Add(new Orders
@@ -369,7 +383,12 @@ namespace HungryBelly.Dialogs
         {
 
             var foods = await result;
-            if (foods.Equals("no") || foods.Equals("nope"))
+            List<string> nolist = new List<string>();
+            nolist.Add("no");
+            nolist.Add("nope");
+            nolist.Add("nay");
+            nolist.Add("nothing");
+            if (nolist.Contains(foods, StringComparer.OrdinalIgnoreCase))
             {
                 await context.PostAsync("You can continue to order or exclude items from your order.");
             } else if(foods.Equals("yes")){
@@ -384,21 +403,11 @@ namespace HungryBelly.Dialogs
         private async Task handleOrderConfirm(IDialogContext context, IAwaitable<string> result)
         {
 
-
-            //await context.SayAsync("Inside finalIntent"+ intentOfresult);
             var foods = await result;
-            List<string> nolist = new List<string>();
-            nolist.Add("no");
-            nolist.Add("nope");
-            nolist.Add("nay");
-            nolist.Add("nothing");
-            string messageDialog = "";
-            String m1 = "Thank you for ordering with Hungry Belly. Here is your final order.";
-
-            if (nolist.Contains(foods, StringComparer.OrdinalIgnoreCase))
-                {
-            
-          
+            String m1 = "Would you like to confirm this order?"+"\n";
+            string messageDialog = m1;
+            if (foods.Equals("no") || foods.Equals("nope"))
+            {
                 foreach (var item in listOfOrders)
                 {
                     messageDialog += item.quantity + " "+item.type + " " + item.name + " $" + getPrice(null, item) + "\n";
@@ -423,14 +432,14 @@ namespace HungryBelly.Dialogs
                     List<EntityRecommendation> entities = entitiesArr.ToObject<List<EntityRecommendation>>();
                     List<CompositeEntity> comp = entitiesArrComp.ToObject<List<CompositeEntity>>();
 
-
+                    //context.PrivateConversationData.SetValue("custom", true);
                     await ExtractEntities(context, entities, comp, false);
                     //await context.Forward(new RootLuisDialog(), this.ResumeAfterNewOrderDialog, message, CancellationToken.None);
 
                 }
                 else
                 {
-                    PromptDialog.Text(context, handleFinalIntent, "I am sorry, we didn't ge that, What else you want to order?");
+                    PromptDialog.Text(context, handleOrderConfirm, "What do you want to order?");
                 }
 
             }
