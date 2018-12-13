@@ -238,34 +238,37 @@ namespace HungryBelly.Dialogs
         private async Task ResumeAfterOrderFoodClarification(IDialogContext context, IAwaitable<string> result)
         {
             var foods = await result;
+            var data = await LuisApi.MakeRequest(foods);
+            var intentOfResult = data["topScoringIntent"]["intent"].Value<string>();
+
 
             Boolean flag = false;
             flag = CheckTypeValidity(context, foods);
             // get quantity with luis call
             if (flag)
             {
-                foodTypePrompted = getType(context, foods);
-                context.PrivateConversationData.SetValue("typeFound", "true");
-                await context.PostAsync($"Great! I'll add {foodTypePrompted} burger to your order");
-                //foodTypePrompted = foods;
-                //await context.SayAsync("Adding to list of orders..");
-                addToOrder(listOfOrders, "burger", foodTypePrompted, 1);
-                /*
-                listOfOrders.Add(new Orders
-                {
-                    name = "burger",
-                    type= foodTypePrompted,
-                    quantity = "1"
-                }
-                );*/
-                //await context.PostAsync("\n Do you want to order anything else?");
-                PromptDialog.Text(context, handleFinalIntent, "Do you want to order anything else from here?");
+                //if (!data.Equals(null) && intentOfResult.Equals("order"))
+
+                    JArray entitiesArr = (JArray)data["entities"];
+                    List<EntityRecommendation> entities = entitiesArr.ToObject<List<EntityRecommendation>>();
+
+                    await ExtractEntities(context, entities);
+                    //await context.Forward(new RootLuisDialog(), this.ResumeAfterNewOrderDialog, message, CancellationToken.None);
+
+
+                //foodTypePrompted = getType(context, foods);
+                //context.PrivateConversationData.SetValue("typeFound", "true");
+                //await context.PostAsync($"Great! I'll add {foodTypePrompted} burger to your order");
+
+                //addToOrder(listOfOrders, "burger", foodTypePrompted, 1);
+
+                //PromptDialog.Text(context, handleFinalIntent, "Do you want to order anything else from here?");
             }
             else
             {
                 context.PrivateConversationData.SetValue("typeFound", "false");
                 //await context.PostAsync("Did not match with nay food type");
-                PromptDialog.Text(context, ResumeAfterOrderFoodClarification, "I'm sorry we don't have that. You can select the ones we have available.");
+                PromptDialog.Text(context, ResumeAfterOrderFoodClarification, "I'm sorry I didn't catch you. You can select the ones we have available.");
             }
             //context.Wait(MessageReceived);
         }
@@ -329,10 +332,16 @@ namespace HungryBelly.Dialogs
             //var entities = data["topScoringIntent"]["intent"].Value<string>();)
 
             //await context.SayAsync("Inside finalIntent"+ intentOfresult);
+            List<string> nolist = new List<string>();
+            nolist.Add("no");
+            nolist.Add("nope");
+            nolist.Add("nay");
+            nolist.Add("nothing");
             string messageDialog = "";
             String m1 = "Thank you for ordering with Hungry Belly. Here is your final order.";
-            if (foods.Equals("no"))
-            {
+
+            if (nolist.Contains(foods, StringComparer.OrdinalIgnoreCase))
+                {
                 foreach (var item in listOfOrders)
                 {
                     messageDialog += item.quantity + " "+item.type + " " + item.name +  "\n";
@@ -357,7 +366,7 @@ namespace HungryBelly.Dialogs
                 }
                 else
                 {
-                    PromptDialog.Text(context, handleFinalIntent, "What do you want to order?");
+                    PromptDialog.Text(context, handleFinalIntent, "I am sorry, we didn't ge that, What else you want to order?");
                 }
 
             }
