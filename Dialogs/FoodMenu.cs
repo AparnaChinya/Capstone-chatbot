@@ -18,8 +18,10 @@ using Newtonsoft.Json;
 
     public static class FoodMenu
     {
-        public static Dictionary<string, List<string>> foodDict = new Dictionary<string, List<string>>();
+    public static Dictionary<string, List<string>> foodDict = new Dictionary<string, List<string>>();
     public static Dictionary<String, String> hmap = new Dictionary<string, string>();
+    public static List<string> nolist = new List<string>();
+    public static List<string> yeslist = new List<string>();
     static FoodMenu(){
 
         hmap.Add("veggie", "burger");
@@ -27,7 +29,7 @@ using Newtonsoft.Json;
         hmap.Add("cheese", "burger");
 
         hmap.Add("shoestring", "fries");
-        hmap.Add("curly", "fires");
+        hmap.Add("curly", "fries");
         hmap.Add("waffle", "fries");
 
         hmap.Add("small", "coke");
@@ -52,8 +54,20 @@ using Newtonsoft.Json;
             coke.Add("medium");
             coke.Add("large");
             foodDict["coke"] = coke;
+                    
+            nolist.Add("no");
+            nolist.Add("nope");
+            nolist.Add("nay");
+            nolist.Add("nothing");
+            nolist.Add("none");
+            nolist.Add("thats it");
 
-
+            yeslist.Add("yes");
+            yeslist.Add("yup");
+            yeslist.Add("yep");
+            yeslist.Add("ya");
+            yeslist.Add("yeah");
+            yeslist.Add("confirm");
     }
     }
 
