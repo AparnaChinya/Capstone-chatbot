@@ -19,8 +19,22 @@ using Newtonsoft.Json;
     public static class FoodMenu
     {
         public static Dictionary<string, List<string>> foodDict = new Dictionary<string, List<string>>();
-        static FoodMenu(){
-            List<string> bur = new List<string>();
+    public static Dictionary<String, String> hmap = new Dictionary<string, string>();
+    static FoodMenu(){
+
+        hmap.Add("veggie", "burger");
+        hmap.Add("ham", "burger");
+        hmap.Add("cheese", "burger");
+
+        hmap.Add("shoestring", "fries");
+        hmap.Add("curly", "fires");
+        hmap.Add("waffle", "fries");
+
+        hmap.Add("small", "coke");
+        hmap.Add("medium", "coke");
+        hmap.Add("large", "coke");
+
+        List<string> bur = new List<string>();
             bur.Add("veggie");
             bur.Add("ham");
             bur.Add("cheese");

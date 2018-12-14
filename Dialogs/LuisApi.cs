@@ -22,7 +22,7 @@ namespace LuisBot.Dialogs
             var queryString = HttpUtility.ParseQueryString(query);
 
             // This app ID is for a public sample app that recognizes requests to turn on and turn off lights
-            var luisAppId = "2acfc32a-8667-431b-80da-e60ef10ac430";
+            var luisAppId = "112f7706-8420-43e4-a61c-2e90e29fa8a4";
             var endpointKey = "9cd99bc8b2844b11b5ef6b5791a64b5b";
 
             // The request header contains your subscription key
@@ -40,7 +40,7 @@ namespace LuisBot.Dialogs
             var endpointUri = "https://westus.api.cognitive.microsoft.com/luis/v2.0/apps/" + luisAppId + "?" + queryString;
             var response = await client.GetAsync(endpointUri);
 
-            var strResponseContent = await response.Content.ReadAsStringAsync();
+             var strResponseContent = await response.Content.ReadAsStringAsync();
 
             var data = (JObject)JsonConvert.DeserializeObject(strResponseContent);
             return data;
