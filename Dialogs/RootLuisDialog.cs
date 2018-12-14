@@ -125,7 +125,7 @@ namespace HungryBelly.Dialogs
             }
         }
 
-       
+
 
 
         [LuisIntent("order")]
@@ -147,13 +147,14 @@ namespace HungryBelly.Dialogs
         }
 
 
-        private async Task ExtractEntities(IDialogContext dialogContext,  List<EntityRecommendation> entities, List<CompositeEntity> comp, Boolean removeFlag)
+        private async Task ExtractEntities(IDialogContext dialogContext, List<EntityRecommendation> entities, List<CompositeEntity> comp, Boolean removeFlag)
         {
             string food = "";
             string foodType = "";
             int quantity = 1;
 
-            try{
+            try
+            {
                 List<Orders> orders = getTempOrder(dialogContext, comp, false, recommendedFoods);
                 // TODO: Recommendation over multiple items, only first order taken now
                 //Orders order = orders.First<Orders>();
@@ -216,13 +217,16 @@ namespace HungryBelly.Dialogs
                     }
                     recommendedStrings.Clear();
                     PromptDialog.Text(dialogContext, ResumeAfterOrderFoodClarification, finalStr);
-                } else{
+                }
+                else
+                {
                     PromptDialog.Text(dialogContext, handleOrderConfirm, "Do you want to order anything else?");
                 }
 
 
             }
-            catch(Exception e) {
+            catch (Exception e)
+            {
                 var exception = e.HelpLink;
                 await dialogContext.PostAsync("Sorry we didn't get that. You can order burgers, fries or coke.");
             }
@@ -277,7 +281,9 @@ namespace HungryBelly.Dialogs
                     //await context.PostAsync("Did not match with nay food type");
                     PromptDialog.Text(context, ResumeAfterOrderFoodClarification, "I'm sorry I didn't catch you. You can select the ones we have available.");
                 }
-            } else{
+            }
+            else
+            {
                 PromptDialog.Text(context, ResumeAfterOrderFoodClarification, "I'm sorry I didn't catch you. You can select the ones we have available.");
             }
             //context.Wait(MessageReceived);
@@ -317,15 +323,19 @@ namespace HungryBelly.Dialogs
             return flag;
         }
 
-        private static List<Orders> getTempOrder(IDialogContext context, List<CompositeEntity> entities, Boolean validity, HashSet<String> recommended){
+        private static List<Orders> getTempOrder(IDialogContext context, List<CompositeEntity> entities, Boolean validity, HashSet<String> recommended)
+        {
             string food = "";
             string type = "";
             int quantity = 1;
             List<Orders> temp = new List<Orders>();
-            foreach(var entity in entities){
+            foreach (var entity in entities)
+            {
                 //entity.
-                foreach(var entityChild in entity.Children){
-                    if(entityChild.Type == "food"){
+                foreach (var entityChild in entity.Children)
+                {
+                    if (entityChild.Type == "food")
+                    {
                         food = entityChild.Value;
                     }
                     if (entityChild.Type == "builtin.number")
@@ -337,7 +347,15 @@ namespace HungryBelly.Dialogs
                         type = entityChild.Value;
                     }
                 }
-                if(food.Equals("burgers")){
+
+                if (food.Length > 7)
+                {
+                    type = food.Substring(0, food.IndexOf('b'));
+                    food = "burger";
+                }
+
+                if (food.Equals("burgers"))
+                {
                     food = "burger";
                 }
                 if (food.Equals("") && !type.Equals(""))
@@ -347,13 +365,15 @@ namespace HungryBelly.Dialogs
 
                     food = FoodMenu.hmap[type];
                 }
-                if (validity){
-                    if(!recommended.Contains(food, StringComparer.OrdinalIgnoreCase)){
+                if (validity)
+                {
+                    if (!recommended.Contains(food, StringComparer.OrdinalIgnoreCase))
+                    {
                         continue;
                     }
-                   
+
                 }
-               
+
                 if (!food.Equals("") && !type.Equals(""))
                 {
                     if (!FoodMenu.hmap[type].Equals(food)) continue;
@@ -361,11 +381,7 @@ namespace HungryBelly.Dialogs
 
                 }
 
-                if (food.Length > 7)
-                {
-                    type = food.Substring(0, food.IndexOf('b'));
-                    food = "burger";
-                }
+
 
                 if (FoodMenu.foodDict[food].Contains(type))
                 {
@@ -375,7 +391,9 @@ namespace HungryBelly.Dialogs
                         type = type,
                         quantity = quantity
                     });
-                } else{
+                }
+                else
+                {
                     temp.Add(new Orders
                     {
                         name = food,
@@ -391,18 +409,24 @@ namespace HungryBelly.Dialogs
             return temp;
         }
 
-        private static void addToOrder(List<Orders> listOfOrders, String name, String foodType, int quantity, Boolean removeFlag){
+        private static void addToOrder(List<Orders> listOfOrders, String name, String foodType, int quantity, Boolean removeFlag)
+        {
             Orders temp = null;
             Boolean flag = false;
-            foreach(Orders order in listOfOrders){
-                if(name.Equals(order.name) && foodType.Equals(order.type)){
+            foreach (Orders order in listOfOrders)
+            {
+                if (name.Equals(order.name) && foodType.Equals(order.type))
+                {
                     if (removeFlag)
                     {
                         order.quantity = order.quantity - quantity;
-                        if(order.quantity <= 0){
+                        if (order.quantity <= 0)
+                        {
                             flag = true;
                             temp = order;
-                        } else{
+                        }
+                        else
+                        {
                             return;
                         }
                     }
@@ -413,7 +437,8 @@ namespace HungryBelly.Dialogs
                     }
                 }
             }
-            if(flag){
+            if (flag)
+            {
                 listOfOrders.Remove(temp);
                 return;
             }
@@ -430,7 +455,8 @@ namespace HungryBelly.Dialogs
         public static double getPrice(List<Orders> orders, Orders ord)
         {
             double total = 0.0;
-            if(orders == null){
+            if (orders == null)
+            {
                 orders = new List<Orders>();
                 orders.Add(ord);
             }
@@ -462,19 +488,48 @@ namespace HungryBelly.Dialogs
         {
 
             var foods = await result;
+            var data = await LuisApi.MakeRequest(foods);
+            var intentOfResult = data["topScoringIntent"]["intent"].Value<string>();
             List<string> nolist = new List<string>();
             nolist.Add("no");
             nolist.Add("nope");
             nolist.Add("nay");
             nolist.Add("nothing");
-            if (nolist.Contains(foods, StringComparer.OrdinalIgnoreCase))
+            if (!data.Equals(null) && intentOfResult.Equals("order"))
+            {
+                JArray entitiesArr = (JArray)data["entities"];
+                JArray entitiesArrComp = (JArray)data["compositeEntities"];
+                List<EntityRecommendation> entities = entitiesArr.ToObject<List<EntityRecommendation>>();
+                List<CompositeEntity> comp = entitiesArrComp.ToObject<List<CompositeEntity>>();
+
+                //context.PrivateConversationData.SetValue("custom", true);
+                await ExtractEntities(context, entities, comp, false);
+                //await context.Forward(new RootLuisDialog(), this.ResumeAfterNewOrderDialog, message, CancellationToken.None);
+            }
+            else if (!data.Equals(null) && intentOfResult.Equals("remove"))
+            {
+
+                JArray entitiesArr = (JArray)data["entities"];
+                JArray entitiesArrComp = (JArray)data["compositeEntities"];
+                List<EntityRecommendation> entities = entitiesArr.ToObject<List<EntityRecommendation>>();
+                List<CompositeEntity> comp = entitiesArrComp.ToObject<List<CompositeEntity>>();
+
+                //context.PrivateConversationData.SetValue("custom", true);
+                await ExtractEntities(context, entities, comp, true);
+
+            }
+            else if (nolist.Contains(foods, StringComparer.OrdinalIgnoreCase))
             {
                 await context.PostAsync("You can continue to order or exclude items from your order.");
-            } else if(foods.Equals("yes")){
+            }
+            else if (foods.Equals("yes"))
+            {
                 // context.Done("Thanks for ordering with HungryBelly. We'll get back with your order soon!");
                 await context.SayAsync("Thank you for ordering with HungryBelly \\m/");
                 context.EndConversation("");
-            } else{
+            }
+            else
+            {
                 await context.PostAsync("I didn't quite catch that. You can continue to order or exclude items from your order.");
             }
         }
@@ -483,13 +538,13 @@ namespace HungryBelly.Dialogs
         {
 
             var foods = await result;
-            String m1 = "Would you like to confirm this order?"+"\n";
+            String m1 = "Would you like to confirm this order? You can exclude items as well." + "\n";
             string messageDialog = m1;
             if (foods.Equals("no") || foods.Equals("nope"))
             {
                 foreach (var item in listOfOrders)
                 {
-                    messageDialog += item.quantity + " "+item.type + " " + item.name + " $" + getPrice(null, item) + "\n";
+                    messageDialog += item.quantity + " " + item.type + " " + item.name + " $" + getPrice(null, item) + "\n";
                 }
 
                 messageDialog += "Your total comes up to $" + getPrice(listOfOrders, null);
