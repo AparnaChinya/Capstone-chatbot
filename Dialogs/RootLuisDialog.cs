@@ -29,41 +29,63 @@ namespace HungryBelly.Dialogs
 
         List<Orders> listOfOrders = new List<Orders>();
 
-        /*
+        
         [LuisIntent("requestMenu")]
         public async Task RequestMenu(IDialogContext context, LuisResult result)
         {
             await context.PostAsync("We have menu for food and drinks.");
-            PromptDialog.Text(context, handleRequestMenu, "What do want to see? - Menu for Food or for Drinks or both ?");
+            PromptDialog.Text(context, HandleRequestMenu, "What do want to see? - Menu for Food or for Drinks or both ?");
         }
 
-        private async Task handleRequestMenu(IDialogContext context, IAwaitable<string> result)
+        private async Task HandleRequestMenu(IDialogContext context, IAwaitable<string> result)
         {
-            var whatToShow = await result; //result.Equals("food");
+            var whatToShow = await result;
+            var data = await LuisApi.MakeRequest(whatToShow);
+            var intentOfResult = data["topScoringIntent"]["intent"].Value<string>();
             string option = whatToShow.ToLower();
-            if (option.Contains("eat") || option.Contains("food"))
-            {
-                await printFoodMenu(context);
-            }
-            else if (option.Contains("drink") || option.Contains("beverage"))
-            {
-                await printDrinksMenu(context);
-            }
-            else if (option.Contains("both") || option.Contains("all"))
-            {
-                await printFoodMenu(context);
-                await printDrinksMenu(context);
-            }
-            else
-            {
-                PromptDialog.Text(context, handleRequestMenu, "Sorry, I don't understand this yet! What would you like to know - Menu for food, Menu for Drinks or both ?");
-            }
 
+            try
+            { 
+                Boolean askToOrder = false;
+                if (option.Contains("eat") || option.Contains("food"))
+                {
+                    askToOrder = true;
+                    await printFoodMenu(context);
+                }
+                else if (option.Contains("drink") || option.Contains("beverage"))
+                {
+                    askToOrder = true;
+                    await printDrinksMenu(context);
+                }
+                else if (option.Contains("both") || option.Contains("all"))
+                {
+                    askToOrder = true;
+                    await printFoodMenu(context);
+                    await printDrinksMenu(context);
+                }
+                else if (intentOfResult.Equals("quitRequest"))
+                {
+                    await printQuitMessage(context);
+                }
+                else
+                {
+                    PromptDialog.Text(context, HandleRequestMenu, "Sorry, I don't understand this yet! What would you like to know - Menu for food, Menu for Drinks or both ?");
+                }
+                if (askToOrder)
+                {
+                    await context.PostAsync("Let me know what you want to Order!");
+                }
+            }
+            catch(Exception e)
+            {
+                await context.PostAsync("Argh something went wrong with menu :( Sorry about that.");
+            }
+                                     
         }
 
         private async Task printFoodMenu(IDialogContext context)
         {
-            string sfm1 = "You can choose from - Cheese, Chicken, Veggie Burgers and Curly, Shoestring, Waffle Fries to eat";
+            string sfm1 = "You can choose from - Cheese, Ham, Veggie Burgers and Curly, Shoestring, Waffle Fries to eat";
             await context.PostAsync(sfm1);
         }
 
@@ -71,6 +93,19 @@ namespace HungryBelly.Dialogs
         {
             string sdm1 = "You can choose from - Diet Coke, Coke, Zero Coke and Lemonade to drink.";
             await context.PostAsync(sdm1);
+        }
+
+        private async Task printQuitMessage(IDialogContext context)
+        {
+            try
+            {
+                await context.PostAsync("It was nice talking to you. Thanks for using Hungry Belly !");
+                context.EndConversation("");
+            }
+            catch (Exception e)
+            {
+                await context.PostAsync("Argh something went wrong with quitting me! :( Sorry about that.");
+            }
         }
 
         [LuisIntent("show_food")]
@@ -84,7 +119,12 @@ namespace HungryBelly.Dialogs
         {
             await printDrinksMenu(context);
         }
-        */
+
+        [LuisIntent("quitRequest")]
+        public async Task QuitRequest(IDialogContext context, LuisResult result)
+        {
+            await printQuitMessage(context);
+        }
 
         [LuisIntent("")]
         [LuisIntent("None")]
@@ -110,7 +150,7 @@ namespace HungryBelly.Dialogs
                     await context.PostAsync("Hmm I'm not sure what you want. Still learning, sorry!");
                 }
             }
-            catch (Exception)
+            catch (Exception e)
             {
                 await context.PostAsync("Argh something went wrong :( Sorry about that.");
             }
@@ -119,9 +159,6 @@ namespace HungryBelly.Dialogs
                 context.Wait(MessageReceived);
             }
         }
-
-       
-
 
         [LuisIntent("order")]
         public async Task Order(IDialogContext dialogContext, IAwaitable<IMessageActivity> activity, LuisResult result)
