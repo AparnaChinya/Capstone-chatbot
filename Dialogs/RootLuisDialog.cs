@@ -340,18 +340,20 @@ namespace HungryBelly.Dialogs
                 if(food.Equals("burgers")){
                     food = "burger";
                 }
-                if(validity){
-                    if(!recommended.Contains(food, StringComparer.OrdinalIgnoreCase)){
-                        continue;
-                    }
-                   
-                }
-                if(food.Equals("") && !type.Equals("")){
+                if (food.Equals("") && !type.Equals(""))
+                {
 
                     //food = context.PrivateConversationData.GetValue<String>("food");
 
                     food = FoodMenu.hmap[type];
                 }
+                if (validity){
+                    if(!recommended.Contains(food, StringComparer.OrdinalIgnoreCase)){
+                        continue;
+                    }
+                   
+                }
+               
                 if (!food.Equals("") && !type.Equals(""))
                 {
                     if (!FoodMenu.hmap[type].Equals(food)) continue;
