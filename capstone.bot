@@ -1,0 +1,18 @@
+{
+    "name": "capstone",
+    "description": "",
+    "services": [
+        {
+            "type": "endpoint",
+            "appId": "",
+            "appPassword": "",
+            "endpoint": "http://localhost:3979/api/messages",
+            "id": "e0ea2040-fc0b-11e8-bad5-752e678f1ef7",
+            "name": "http://localhost:3979/api/messages"
+        }
+    ],
+    "padlock": "",
+    "version": "2.0",
+    "overrides": null,
+    "path": "C:\\Users\\adity\\source\\repos\\Capstone-chatbot\\capstone.bot"
+}

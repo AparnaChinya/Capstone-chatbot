@@ -298,8 +298,8 @@ namespace HungryBelly.Dialogs
                     flag = true;
                 }
             }
-            //return flag;
-            return true;
+            return flag;
+            //return true;
         }
 
         private static String getType(IDialogContext context, string foods)
